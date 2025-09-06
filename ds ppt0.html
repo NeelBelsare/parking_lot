@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parking Lot Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chosen Palette: Warm Neutrals -->
+    <!-- Application Structure Plan: The application is designed as an interactive dashboard and simulator. This structure was chosen over a linear presentation to provide a hands-on learning experience. The user can directly interact with the system's logic through simulation buttons, see immediate visual feedback on the parking grid and data charts, and explore the underlying data structures and algorithms in a separate, tabbed section. This active engagement model is more effective for understanding technical concepts than passively reading slides. The layout is split into a main interactive simulator and a section for theoretical explanations, and now includes a simplified workflow and a real-world case study for a complete view of the system's function and value. -->
+    <!-- Visualization & Content Choices: 
+        - Parking Lot Status (Filled/Available): Goal: Inform -> Viz: Donut Chart (Chart.js) & large stat cards. Interaction: Updates in real-time with simulations. Justification: Provides an immediate, high-level overview of the lot's capacity.
+        - Parking Lot Map: Goal: Organize/Inform -> Viz: HTML/CSS Grid. Interaction: Slot colors change based on occupancy status upon button clicks. Justification: A direct, intuitive visual representation of the core data structure (`lot_map`).
+        - System Logic (Entry/Exit): Goal: Explain -> Viz: An activity log (text list) and interactive buttons. Interaction: Users trigger the logic via "Enter"/"Exit" buttons and see results in the log. Justification: Demonstrates the cause-and-effect of the system's algorithms in real-time.
+        - Data Structure Details: Goal: Explain -> Viz: Tabbed content sections. Interaction: User clicks tabs to reveal detailed explanations. Justification: Keeps the main interface clean and focused on simulation, while making deeper knowledge easily accessible without overwhelming the user.
+        - Workflow Chart: Goal: Explain/Summarize -> Viz: Static HTML/CSS flow diagram with Unicode arrows. Interaction: None. Justification: Provides a high-level, easily digestible visual summary of the system's logic without requiring complex scripting.
+        - Case Study: Goal: Provide Context -> Viz: Text block. Interaction: None. Justification: Connects the abstract concepts to a practical, real-world application.
+        - Library/Method: Chart.js for the canvas-based donut chart; Vanilla JS for all logic and DOM manipulation; Tailwind CSS for all styling and layout.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        .tab-button.active {
+            border-color: #4f46e5;
+            color: #4f46e5;
+            background-color: #eef2ff;
+        }
+        .chart-container {
+            position: relative; 
+            width: 100%; 
+            max-width: 350px; 
+            margin-left: auto; 
+            margin-right: auto; 
+            height: auto;
+            max-height: 350px;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8">
+        
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-slate-900">Parking Lot Management System</h1>
+            <p class="mt-2 text-lg text-slate-600">An Interactive Simulator for a Data Structures Project</p>
+        </header>
+
+        <!-- New section with project details -->
+        <section id="project-details" class="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-sm mb-8">
+            <h2 class="text-2xl font-bold mb-2 text-slate-900">Project Details</h2>
+            <div class="space-y-2 text-slate-700">
+                <p><strong>Subject Name:</strong> Data Structures</p>
+                <p><strong>Problem Statement:</strong> Parking Lot Management System</p>
+                <p><strong>Students:</strong> Rohan Khillare and Yash Nagul</p>
+                <p><strong>Department:</strong> SY AI&DsS</p>
+            </div>
+        </section>
+
+        <main>
+            <section id="introduction" class="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-sm mb-8">
+                <h2 class="text-2xl font-bold mb-4 text-slate-900">Project Overview</h2>
+                <p class="text-slate-700">Finding a parking spot in crowded areas can be a frustrating experience, leading to wasted time and increased traffic. This project proposes a smart parking management system that automates the process of finding available slots and guiding vehicles. This interactive simulator demonstrates the core logic, data structures, and real-time status tracking of such a system. Use the controls below to see how vehicles entering and exiting affect the parking lot's state.</p>
+            </section>
+            
+            <section id="simulator" class="bg-white p-6 rounded-lg shadow-sm mb-8">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    
+                    <div class="lg:col-span-1 flex flex-col gap-6">
+                        <h3 class="text-xl font-bold text-center text-slate-900">Live Dashboard</h3>
+                        
+                        <div class="grid grid-cols-3 gap-4 text-center">
+                            <div class="bg-blue-100 p-4 rounded-lg">
+                                <p class="text-sm font-medium text-blue-800">Total Slots</p>
+                                <p id="total-slots" class="text-3xl font-bold text-blue-900">0</p>
+                            </div>
+                            <div class="bg-green-100 p-4 rounded-lg">
+                                <p class="text-sm font-medium text-green-800">Available</p>
+                                <p id="available-slots" class="text-3xl font-bold text-green-900">0</p>
+                            </div>
+                             <div class="bg-red-100 p-4 rounded-lg">
+                                <p class="text-sm font-medium text-red-800">Filled</p>
+                                <p id="filled-slots" class="text-3xl font-bold text-red-900">0</p>
+                            </div>
+                        </div>
+
+                        <div class="chart-container">
+                            <canvas id="occupancyChart"></canvas>
+                        </div>
+                        
+                        <div class="flex flex-col gap-4">
+                             <button id="entry-btn" class="w-full bg-indigo-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-indigo-700 transition-colors shadow-md">Simulate Vehicle Entry</button>
+                             <button id="exit-btn" class="w-full bg-slate-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-slate-700 transition-colors shadow-md">Simulate Vehicle Exit</button>
+                        </div>
+
+                        <div>
+                            <h4 class="font-bold mb-2 text-slate-900">Activity Log</h4>
+                            <div id="activity-log" class="h-40 bg-slate-100 p-3 rounded-lg overflow-y-auto text-sm text-slate-700">
+                                Welcome to the parking simulator!
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="lg:col-span-2">
+                        <h3 class="text-xl font-bold text-center mb-4 text-slate-900">Parking Lot Visualizer</h3>
+                        <div id="parking-lot-grid" class="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-2 p-4 bg-slate-200 rounded-lg">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="concepts" class="bg-white p-6 rounded-lg shadow-sm mb-8">
+                <h2 class="text-2xl font-bold mb-4 text-center text-slate-900">Core Concepts Explained</h2>
+                <div class="border-b border-slate-200 mb-4">
+                    <nav class="-mb-px flex justify-center space-x-4" aria-label="Tabs">
+                        <button class="tab-button active whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="data-structures">Data Structures</button>
+                        <button class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-slate-500 border-transparent hover:border-slate-300" data-tab="entry-logic">Entry Logic</button>
+                        <button class="tab-button whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-slate-500 border-transparent hover:border-slate-300" data-tab="exit-logic">Exit Logic</button>
+                    </nav>
+                </div>
+                <div>
+                    <div id="data-structures" class="tab-content space-y-4">
+                        <div>
+                            <h3 class="font-semibold text-lg text-slate-800">Parking Lot Representation: Array</h3>
+                            <p class="text-slate-600">The entire parking lot is represented by a simple array, where each index corresponds to a parking slot. The value at each index is an object that holds the slot's status ('available' or 'filled') and its unique ID. This allows for direct, O(1) access to any parking spot's information.</p>
+                        </div>
+                         <div>
+                            <h3 class="font-semibold text-lg text-slate-800">Available Slot Management: Stack</h3>
+                            <p class="text-slate-600">To efficiently manage available slots, we use a data structure that behaves like a Stack (implemented here with an array). When the system initializes, all slot IDs are pushed onto this stack. When a vehicle enters, a slot ID is popped from the stack—a quick O(1) operation. When a vehicle exits, its slot ID is pushed back onto the stack, making it available for the next vehicle. This is highly efficient as we don't need to iterate through the entire parking lot to find an empty space.</p>
+                        </div>
+                    </div>
+                    <div id="entry-logic" class="tab-content hidden space-y-2">
+                        <ol class="list-decimal list-inside text-slate-600 space-y-2">
+                            <li>A vehicle arrives, triggering the "Simulate Vehicle Entry" event.</li>
+                            <li>The system checks if the stack of available slots is empty.</li>
+                            <li><strong>If spots are available:</strong>
+                                <ul class="list-disc list-inside ml-4 mt-1 text-slate-500">
+                                    <li>An available slot ID is popped from the stack.</li>
+                                    <li>The status of that slot in the main lot array is updated to 'filled'.</li>
+                                    <li>The 'Available Slots' count is decremented, and 'Filled Slots' is incremented.</li>
+                                    <li>A success message is displayed, guiding the vehicle to the assigned slot.</li>
+                                    <li>The UI is updated to reflect all changes.</li>
+                                </ul>
+                            </li>
+                            <li><strong>If no spots are available:</strong> The system displays a "Lot Full" message, and no state changes occur.</li>
+                        </ol>
+                    </div>
+                    <div id="exit-logic" class="tab-content hidden space-y-2">
+                        <ol class="list-decimal list-inside text-slate-600 space-y-2">
+                            <li>A vehicle leaves, triggering the "Simulate Vehicle Exit" event.</li>
+                            <li>The system first checks if there are any filled slots to ensure a vehicle can actually leave.</li>
+                            <li><strong>If the lot is not empty:</strong>
+                                <ul class="list-disc list-inside ml-4 mt-1 text-slate-500">
+                                    <li>A random occupied slot is selected for the simulation.</li>
+                                    <li>The status of that slot in the main lot array is updated to 'available'.</li>
+                                    <li>The freed slot ID is pushed back onto the available slots stack.</li>
+                                    <li>The 'Available Slots' count is incremented, and 'Filled Slots' is decremented.</li>
+                                    <li>A message confirms the vehicle's departure.</li>
+                                     <li>The UI is updated to reflect all changes.</li>
+                                </ul>
+                            </li>
+                            <li><strong>If the lot is already empty:</strong> The system displays a message indicating there are no vehicles to exit.</li>
+                        </ol>
+                    </div>
+                </div>
+            </section>
+
+            <section id="workflow" class="bg-white p-6 rounded-lg shadow-sm mb-8">
+                <h2 class="text-2xl font-bold mb-4 text-center text-slate-900">System Workflow</h2>
+                <div class="flex flex-col items-center space-y-4 text-center text-slate-700">
+                    <div class="bg-indigo-100 p-4 rounded-lg font-semibold text-indigo-800 shadow-md">Vehicle Arrives at Entry Gate</div>
+                    <div class="text-2xl text-slate-400">↓</div>
+                    <div class="bg-gray-100 p-4 rounded-lg shadow-sm">Check Available Slots (Stack.length > 0)</div>
+                    <div class="flex space-x-8">
+                        <div class="flex flex-col items-center">
+                            <div class="text-xl text-green-600 font-semibold">Yes, available</div>
+                            <div class="text-2xl text-green-400">↓</div>
+                            <div class="bg-green-100 p-4 rounded-lg shadow-sm">Pop Slot ID from Stack, Guide Vehicle</div>
+                            <div class="text-2xl text-green-400">↓</div>
+                            <div class="bg-green-100 p-4 rounded-lg shadow-sm">Update Slot Status to 'Filled'</div>
+                            <div class="text-2xl text-green-400">↓</div>
+                             <div class="bg-green-100 p-4 rounded-lg shadow-sm">Update Filled/Available Counts</div>
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <div class="text-xl text-red-600 font-semibold">No, lot full</div>
+                            <div class="text-2xl text-red-400">↓</div>
+                            <div class="bg-red-100 p-4 rounded-lg shadow-sm">Display "Lot Full" Message</div>
+                        </div>
+                    </div>
+                     <div class="text-2xl text-slate-400">→</div>
+                     <div class="bg-gray-100 p-4 rounded-lg shadow-sm">Vehicle Exits</div>
+                     <div class="text-2xl text-slate-400">↓</div>
+                     <div class="bg-gray-100 p-4 rounded-lg shadow-sm">Push Slot ID back to Stack, Update Status to 'Available'</div>
+                     <div class="text-2xl text-slate-400">↓</div>
+                     <div class="bg-gray-100 p-4 rounded-lg shadow-sm">Update Filled/Available Counts</div>
+                </div>
+            </section>
+
+            <section id="case-study" class="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-sm">
+                <h2 class="text-2xl font-bold mb-4 text-slate-900">Case Study: The Grand Mall Parking Lot</h2>
+                <p class="text-slate-700">The Grand Mall, with its 2,000 parking spaces, often experiences heavy traffic and congestion during peak hours, leading to customer frustration and lost revenue. Without a real-time system, drivers must circle the lot endlessly in search of a spot. Implementing the Parking Lot Management System would transform this experience.</p>
+                <ul class="list-disc list-inside text-slate-700 mt-4 space-y-2">
+                    <li>**Reduced Congestion:** On an average Saturday, the system would reduce the time a driver spends searching for a spot from 15 minutes to under 2 minutes, preventing long queues and internal traffic jams.</li>
+                    <li>**Increased Efficiency:** The system could manage an entry and exit rate of up to 500 vehicles per hour, ensuring a smooth flow of traffic even during the busiest periods.</li>
+                    <li>**Enhanced Customer Experience:** A display at the entrance would show the number of available slots in real-time. This eliminates uncertainty and enhances the customer's shopping experience from the moment they arrive.</li>
+                </ul>
+                <p class="text-slate-700 mt-4">This data structures-based solution provides a robust and scalable foundation for a real-world problem, demonstrating the power of a simple, logical system to create significant operational improvements and positive user experiences.</p>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const TOTAL_SLOTS = 50;
+
+            let lotMap = [];
+            let availableSlotsStack = [];
+            let filledSlots = [];
+
+            const totalSlotsEl = document.getElementById('total-slots');
+            const availableSlotsEl = document.getElementById('available-slots');
+            const filledSlotsEl = document.getElementById('filled-slots');
+            const parkingLotGridEl = document.getElementById('parking-lot-grid');
+            const activityLogEl = document.getElementById('activity-log');
+            const entryBtn = document.getElementById('entry-btn');
+            const exitBtn = document.getElementById('exit-btn');
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            let occupancyChart;
+
+            function init() {
+                lotMap = [];
+                availableSlotsStack = [];
+                filledSlots = [];
+                parkingLotGridEl.innerHTML = '';
+                
+                for (let i = 0; i < TOTAL_SLOTS; i++) {
+                    const slotId = `P-${String(i + 1).padStart(2, '0')}`;
+                    lotMap.push({ id: slotId, status: 'available' });
+                    availableSlotsStack.push(slotId);
+                    
+                    const slotDiv = document.createElement('div');
+                    slotDiv.id = `slot-${slotId}`;
+                    slotDiv.className = 'w-full h-10 rounded bg-green-300 flex items-center justify-center text-xs font-semibold text-green-800 transition-colors';
+                    slotDiv.textContent = slotId;
+                    parkingLotGridEl.appendChild(slotDiv);
+                }
+                availableSlotsStack.reverse();
+                updateDashboard();
+                initChart();
+                logMessage('System initialized. All slots are available.');
+            }
+
+            function logMessage(message) {
+                const p = document.createElement('p');
+                p.textContent = `> ${message}`;
+                activityLogEl.appendChild(p);
+                activityLogEl.scrollTop = activityLogEl.scrollHeight;
+            }
+            
+            function updateDashboard() {
+                const availableCount = availableSlotsStack.length;
+                const filledCount = TOTAL_SLOTS - availableCount;
+                
+                totalSlotsEl.textContent = TOTAL_SLOTS;
+                availableSlotsEl.textContent = availableCount;
+                filledSlotsEl.textContent = filledCount;
+
+                if (occupancyChart) {
+                    occupancyChart.data.datasets[0].data = [filledCount, availableCount];
+                    occupancyChart.update();
+                }
+            }
+            
+            function handleVehicleEntry() {
+                if (availableSlotsStack.length > 0) {
+                    const slotIdToOccupy = availableSlotsStack.pop();
+                    const slotIndex = lotMap.findIndex(slot => slot.id === slotIdToOccupy);
+                    
+                    if(slotIndex !== -1) {
+                        lotMap[slotIndex].status = 'filled';
+                        filledSlots.push(slotIdToOccupy);
+
+                        const slotDiv = document.getElementById(`slot-${slotIdToOccupy}`);
+                        slotDiv.classList.remove('bg-green-300', 'text-green-800');
+                        slotDiv.classList.add('bg-red-400', 'text-red-900');
+                        
+                        logMessage(`Vehicle entered. Assigned to slot ${slotIdToOccupy}.`);
+                        updateDashboard();
+                    }
+                } else {
+                    logMessage('Parking lot is full. Cannot accept new vehicles.');
+                }
+            }
+
+            function handleVehicleExit() {
+                if (filledSlots.length > 0) {
+                    const randomIndex = Math.floor(Math.random() * filledSlots.length);
+                    const slotIdToFree = filledSlots.splice(randomIndex, 1)[0];
+                    
+                    const slotIndex = lotMap.findIndex(slot => slot.id === slotIdToFree);
+
+                    if (slotIndex !== -1) {
+                        lotMap[slotIndex].status = 'available';
+                        availableSlotsStack.push(slotIdToFree);
+                        
+                        const slotDiv = document.getElementById(`slot-${slotIdToFree}`);
+                        slotDiv.classList.remove('bg-red-400', 'text-red-900');
+                        slotDiv.classList.add('bg-green-300', 'text-green-800');
+                        
+                        logMessage(`Vehicle exited from slot ${slotIdToFree}.`);
+                        updateDashboard();
+                    }
+                } else {
+                    logMessage('Parking lot is empty. No vehicles to exit.');
+                }
+            }
+            
+            function initChart() {
+                const ctx = document.getElementById('occupancyChart').getContext('2d');
+                occupancyChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Filled', 'Available'],
+                        datasets: [{
+                            data: [0, TOTAL_SLOTS],
+                            backgroundColor: ['#f87171', '#86efac'],
+                            borderColor: ['#ef4444', '#22c55e'],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (context.parsed !== null) {
+                                            label += context.parsed;
+                                        }
+                                        const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                                        const percentage = total > 0 ? ((context.parsed / total) * 100).toFixed(1) + '%' : '0%';
+                                        return `${label} (${percentage})`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            entryBtn.addEventListener('click', handleVehicleEntry);
+            exitBtn.addEventListener('click', handleVehicleExit);
+            
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    tabButtons.forEach(btn => {
+                        btn.classList.remove('active');
+                        btn.classList.add('text-slate-500', 'border-transparent');
+                    });
+                    button.classList.add('active');
+                    button.classList.remove('text-slate-500', 'border-transparent');
+
+                    const tabId = button.dataset.tab;
+                    tabContents.forEach(content => {
+                        if (content.id === tabId) {
+                            content.classList.remove('hidden');
+                        } else {
+                            content.classList.add('hidden');
+                        }
+                    });
+                });
+            });
+
+            init();
+        });
+    </script>
+</body>
+</html>
